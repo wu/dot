@@ -1,0 +1,46 @@
+[user]
+  name = Alex White
+  email = VVu@geekfarm.org
+
+[color]
+  ui = yes
+  diff = auto
+  status = yes
+  branch = yes
+
+[color "branch"]
+  current = yellow reverse
+  local = yellow
+  remote = green
+
+[color "diff"]
+  meta = magenta bold
+  frag = yellow
+  old = red
+  new = green
+
+[color "status"]
+  added = yellow
+  changed = green
+  untracked = cyan
+
+[alias]
+  st = status
+  br = branch
+  ci = commit
+  co = checkout
+  wc = log --date=local --pretty='format:%Cgreen%h %Cred%ad %Creset%s'
+  d = diff
+  this = !git init && git add . && git commit -m \"initial commit\"
+
+[core]
+  editor = vi
+  excludesfile = /opt/boxen/config/git/gitignore
+  autocrlf = input
+
+[log]
+  date = local
+
+[push]
+  default = simple
+
