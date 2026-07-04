@@ -1,0 +1,134 @@
+# Based on phil's prompt
+
+function precmd {
+
+local TERMWIDTH
+(( TERMWIDTH = ${COLUMNS} - 1 ))
+
+###
+# use colors.
+local RED="%{[0;31m%}"
+local LIGHT_RED="%{[1;31m%}"
+local CYAN="%{[0;36m%}"
+local LIGHT_CYAN="%{[1;36m%}"
+local BLUE="%{[0;34m%}"
+local LIGHT_BLUE="%{[1;34m%}"
+local GREEN="%{[0;32m%}"
+local LIGHT_GREEN="%{[1;32m%}"
+local MAGENTA="%{[0;35m%}"
+local LIGHT_MAGENTA="%{[1;35m%}"
+local YELLOW="%{[0;33m%}"
+local LIGHT_YELLOW="%{[1;33m%}"
+local GRAY="%{[1;30m%}"
+local BLACK="%{[0;30m%}"
+local LIGHT_GRAY="%{[0;37m%}"
+local WHITE="%{[1;37m%}"
+local NO_COLOUR="%{[0m%}"
+local BEGINNING_OF_LINE="%{[80D%}"
+
+if [ -z "$PROMPT_COLOR" ]
+then
+
+    if [ -z "$INSIDE_DOCKER_CONTAINER" ]
+    then
+        PROMPT_COLOR="$BLUE"
+    else
+        PROMPT_COLOR="$GREEN"
+    fi
+fi
+
+###
+# See if we can use extended characters to look nicer.
+
+case $TERM in
+    linux|noxterm*)
+	local SHIFT_IN='%{%}'
+	local SHIFT_OUT='%{%}'
+	local HBAR='q'
+	local ULCORNER='l'
+	local LLCORNER='m'
+	local LRCORNER='j'
+	local URCORNER='k'
+	;;
+    *)
+	local SHIFT_IN=""
+	local SHIFT_OUT=""
+	local HBAR='-'
+	local ULCORNER='-'
+	local LLCORNER='-'
+	local LRCORNER='-'
+	local URCORNER='-'
+	;;
+esac
+
+
+###
+# Truncate the path if it's to long.
+
+local fill=""
+local pwdlen=""
+
+let local promptsize=$(print -Pn -- "--()--(%D{ %Y.%m.%d %H:%M} )-(%l:L%L)--" | wc -c | tr -d " ")
+let local pwdsize=$(print -Pn -- "%~" | wc -c | tr -d " ")
+
+if [[ "$promptsize + $pwdsize" -gt $TERMWIDTH ]]; then
+   let pwdlen="$TERMWIDTH - $promptsize"
+else
+   let fillsize="$TERMWIDTH - ($promptsize + $pwdsize)"
+   while [[ $fillsize -gt 0 ]]
+   do
+      fill="${fill}$HBAR"
+      let fillsize=${fillsize}-1
+   done
+fi
+
+echo
+
+###
+# Finally, the prompt.
+
+PROMPT="$BEGINNING_OF_LINE\
+$PROMPT_COLOR$SHIFT_IN$ULCORNER$LIGHT_BLUE$HBAR$SHIFT_OUT(\
+$PROMPT_COLOR%$pwdlen<...<%~%<<\
+$LIGHT_BLUE)$SHIFT_IN\
+$HBAR$PROMPT_COLOR$fill$LIGHT_BLUE$HBAR$SHIFT_OUT(\
+$PROMPT_COLOR%D{ %Y.%m.%d %H:%M }\
+$LIGHT_BLUE)$SHIFT_IN$HBAR$SHIFT_OUT($PROMPT_COLOR%l:L%L\
+$LIGHT_BLUE)$SHIFT_IN$HBAR$PROMPT_COLOR$URCORNER$SHIFT_OUT\
+
+$PROMPT_COLOR$SHIFT_IN$LLCORNER$LIGHT_BLUE$HBAR$SHIFT_OUT(\
+%(?..$LIGHT_RED%?$LIGHT_BLUE:)\
+$PROMPT_COLOR%n@%m\
+$LIGHT_GRAY:$LIGHT_BLUE#$LIGHT_BLUE)$SHIFT_IN$HBAR$SHIFT_OUT\
+$PROMPT_COLOR$SHIFT_IN$HBAR$SHIFT_OUT\
+$NO_COLOUR "
+
+#RPROMPT=" $PROMPT_COLOR$SHIFT_IN$HBAR$LIGHT_BLUE$HBAR$SHIFT_OUT\
+#($PROMPT_COLOR%n@%m:%l\
+#$LIGHT_BLUE)$SHIFT_IN$HBAR$PROMPT_COLOR$LRCORNER$SHIFT_OUT$PROMPT_COLOR"
+
+[ ! -z "$CLEARCASE_ROOT" ] && RPROMPT=" $PROMPT_COLOR$SHIFT_IN$HBAR$LIGHT_BLUE$HBAR$SHIFT_OUT($RED${CLEARCASE_ROOT#/view/}$LIGHT_BLUE)$SHIFT_IN$HBAR$PROMPT_COLOR$LRCORNER$SHIFT_OUT$PROMPT_COLOR"
+
+PS2="$PROMPT_COLOR$SHIFT_IN$HBAR$SHIFT_OUT\
+$LIGHT_BLUE$SHIFT_IN$HBAR$SHIFT_OUT(\
+$LIGHT_BLUE%_$LIGHT_BLUE)$SHIFT_IN$HBAR$SHIFT_OUT\
+$PROMPT_COLOR$SHIFT_IN$HBAR$SHIFT_OUT$NO_COLOUR "
+
+vcs_info
+
+if [ -z "${vcs_info_msg_0_}" ]
+then
+   # not set into any vcs repo
+   RPROMPT=''
+else
+  if [ "${vcs_info_msg_0_}" = " (git)-[master]-" ]
+  then
+    # git master branch in gray
+    RPROMPT=$LIGHT_BLUE-${vcs_info_msg_0_# \(git\)\-}$NO_COLOUR
+  else
+    # git non-master branch in red
+    RPROMPT=$RED-${vcs_info_msg_0_# \(git\)\-}$NO_COLOUR
+  fi
+fi
+
+}

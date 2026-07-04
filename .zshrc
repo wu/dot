@@ -5,7 +5,9 @@ SAVEHIST=10000
 export PATH=/usr/local/go/bin:$PATH
 export GOPATH=~/go
 
-autoload promptinit
-promptinit
-prompt adam2
+
+fpath=(~/dot/.zsh $fpath)
+autoload -U promptinit && promptinit
+prompt wu
+
 
