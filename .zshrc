@@ -4,3 +4,8 @@ HISTSIZE=10000
 SAVEHIST=10000
 export PATH=/usr/local/go/bin:$PATH
 export GOPATH=~/go
+
+autoload promptinit
+promptinit
+prompt adam2
+
