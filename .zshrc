@@ -15,4 +15,7 @@ fpath=(~/dot/.zsh $fpath)
 autoload -U promptinit && promptinit
 prompt wu
 
+# aliases
+alias g="git"
+alias k="kubectl"
 
