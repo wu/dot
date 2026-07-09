@@ -15,7 +15,12 @@ fpath=(~/dot/.zsh $fpath)
 autoload -U promptinit && promptinit
 prompt wu
 
+# zsh completions
+fpath=(~/dot/zsh-completion $fpath)
+autoload -U compinit && compinit
+
 # aliases
 alias g="git"
 alias k="kubectl"
+alias ll="ls -la"
 
