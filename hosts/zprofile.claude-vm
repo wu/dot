@@ -3,7 +3,10 @@
 export LOGNAME=$(id -un)
 export HOME=$(getent passwd "$LOGNAME" | cut -d: -f6)
 export SHELL=$(getent passwd "$LOGNAME" | cut -d: -f7)
+
 export TERM=xterm-256color
+
+export PATH="$PATH:/home/wu/.local/bin"
 
 cd ~
 
