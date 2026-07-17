@@ -22,7 +22,7 @@ link "$repo" "$HOME/dot"
 for src in "$repo"/.*; do
   name=$(basename "$src")
   case $name in
-    .|..|.git|.claude|.zsh) continue ;;
+    .|..|.git|.gitignore|.claude|.zsh) continue ;;
   esac
   link "$src" "$HOME/$name"
 done
