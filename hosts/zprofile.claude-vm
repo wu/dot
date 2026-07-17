@@ -1,0 +1,9 @@
+# tart exec bypasses login(1), so SHELL/HOME/LOGNAME are inherited
+# from the guest agent instead of being set from passwd
+export LOGNAME=$(id -un)
+export HOME=$(getent passwd "$LOGNAME" | cut -d: -f6)
+export SHELL=$(getent passwd "$LOGNAME" | cut -d: -f7)
+export TERM=xterm-256color
+
+cd ~
+
