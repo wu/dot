@@ -23,5 +23,9 @@
 (global-set-key "\C-cm" 'magit-status)
 (desktop-save-mode 1)
 
+(setq-default show-trailing-whitespace t)
+
+(global-set-key [(meta +)] 'align-regexp)
+
 (server-start)
 
