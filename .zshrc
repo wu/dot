@@ -22,7 +22,7 @@ setopt				\
     pushd_ignore_dups		\
 
 # history
-HISTFILE=~/.zsh_history
+HISTFILE=~/.zshhistory
 HISTSIZE=10000
 SAVEHIST=10000
 
