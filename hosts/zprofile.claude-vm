@@ -6,7 +6,7 @@ export SHELL=$(getent passwd "$LOGNAME" | cut -d: -f7)
 
 export TERM=xterm-256color
 
-export PATH="$PATH:/home/wu/.local/bin"
+export PATH="$PATH:$(go env GOPATH)/bin:/home/wu/.local/bin"
 
 cd ~
 
