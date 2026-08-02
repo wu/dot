@@ -35,10 +35,23 @@
 (global-set-key "\C-cm" 'magit-status)
 (desktop-save-mode 1)
 
+;; Undo/redo window layouts: C-c <left> / C-c <right>.
+(winner-mode 1)
+
 (setq-default show-trailing-whitespace t)
 
 (global-set-key [(meta +)] 'align-regexp)
 
+
+;; --- magit windows ---
+
+;; Status replaces the buffer in the selected window rather than splitting it,
+;; so `winner-undo' steps back to whatever was being edited there.  Diffs, logs
+;; and commit buffers still get their own windows -- they are meant to be read
+;; alongside the status buffer.  `q' also restores the pre-magit layout.
+(setq magit-display-buffer-function
+      #'magit-display-buffer-same-window-except-diff-v1
+      magit-bury-buffer-function #'magit-restore-window-configuration)
 
 
 ;; --- magit repolist ---
