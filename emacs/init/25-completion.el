@@ -7,6 +7,12 @@
 (when (fboundp 'vertico-mode) (vertico-mode 1))
 (when (fboundp 'marginalia-mode) (marginalia-mode 1))
 
+;; 10 candidates is the default and is cramped for buffer lists.  `resize' t
+;; shrinks back down when there are only a few matches, so the tall list costs
+;; nothing when it is not needed.
+(setq vertico-count 20
+      vertico-resize t)
+
 ;; Space-separated fragments match in any order, so `go main' finds
 ;; api/main.go.  orderless registers its style at load time rather than via an
 ;; autoload, so it has to be required before `completion-styles' names it.
@@ -18,6 +24,30 @@
         ;; File names keep `partial-completion' so /u/s/l expands the way it
         ;; always has, and TRAMP paths still complete.
         completion-category-overrides '((file (styles partial-completion)))))
+
+;; --- moving around the candidate list ---
+
+(defun my/vertico-next-half ()
+  "Move down half a screen of candidates."
+  (interactive)
+  (vertico-next (max 1 (/ vertico-count 2))))
+
+(defun my/vertico-previous-half ()
+  "Move up half a screen of candidates."
+  (interactive)
+  (vertico-previous (max 1 (/ vertico-count 2))))
+
+;; Vertico reaches these via remaps of `scroll-up-command' and friends, which
+;; only works if nothing else claims the keys first -- bind them outright.
+(with-eval-after-load 'vertico
+  (keymap-set vertico-map "<prior>"   #'vertico-scroll-down)  ; PgUp: page up
+  (keymap-set vertico-map "<next>"    #'vertico-scroll-up)    ; PgDn: page down
+  (keymap-set vertico-map "M-v"       #'vertico-scroll-down)
+  (keymap-set vertico-map "C-v"       #'vertico-scroll-up)
+  (keymap-set vertico-map "M-<"       #'vertico-first)        ; top of list
+  (keymap-set vertico-map "M->"       #'vertico-last)         ; bottom of list
+  (keymap-set vertico-map "C-<prior>" #'my/vertico-previous-half)
+  (keymap-set vertico-map "C-<next>"  #'my/vertico-next-half))
 
 ;; Let a minibuffer command read from the minibuffer again -- consult previews
 ;; and `M-x' from inside a prompt both rely on it.
