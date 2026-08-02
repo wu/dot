@@ -40,4 +40,4 @@ autoload -U compinit && compinit
 alias g="git"
 alias k="kubectl"
 alias ll="ls -la"
-
+alias ec="emacsclient"
