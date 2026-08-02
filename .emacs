@@ -7,6 +7,14 @@
         (foreground-color . "#d0d0d0")
         (cursor-color . "#f0f0f0")))
 
+;; --- font ---
+;; Anonymous Pro if it's installed, otherwise leave the default alone.
+;; Frames created by emacsclient read `default-frame-alist', so set both.
+(when (and (display-graphic-p) (find-font (font-spec :name "Anonymous Pro")))
+  (add-to-list 'default-frame-alist '(font . "Anonymous Pro-12"))
+  (set-face-attribute 'default nil :font "Anonymous Pro-12"))
+
+;; --- server ---
 ;; Start early: an error further down this file must not cost us emacsclient.
 (server-start)
 
@@ -23,6 +31,7 @@
  ;; If there is more than one, they won't work right.
  )
 
+;; --- misc ---
 (global-set-key "\C-cm" 'magit-status)
 (desktop-save-mode 1)
 
