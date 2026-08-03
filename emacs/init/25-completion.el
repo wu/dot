@@ -71,7 +71,15 @@
   ;; C-s stays isearch; consult-line lives alongside it under the search map.
   (global-set-key (kbd "M-s l")   #'consult-line)
   (global-set-key (kbd "M-s r")   #'consult-ripgrep)
-  (global-set-key (kbd "M-s f")   #'consult-find))
+  (global-set-key (kbd "M-s f")   #'consult-find)
+  ;; Displaces `find-file-read-only', which is rarely what C-x C-r is wanted for.
+  (global-set-key (kbd "C-x C-r") #'consult-recent-file))
+
+;; This prompt's own history as a filterable list, rather than cycling it one
+;; entry at a time with M-p.  Replaces `previous-matching-history-element',
+;; which asks for a regexp up front and cannot be narrowed afterwards.
+(when (fboundp 'consult-history)
+  (keymap-set minibuffer-local-map "C-r" #'consult-history))
 
 ;; Previewing every candidate opens files as you arrow past them, which is
 ;; expensive over TRAMP and noisy with eglot; require M-. to preview instead.
