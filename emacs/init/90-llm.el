@@ -44,7 +44,37 @@
     (setq minuet-openai-compatible-options
           (plist-put minuet-openai-compatible-options (car kv) (cdr kv))))
 
-  (add-hook 'prog-mode-hook #'minuet-auto-suggestion-mode)
+  ;; No `prog-mode-hook' entry: `minuet-auto-suggestion-mode' fires a request on
+  ;; every typing pause, which against a local 26B model means a steady stream
+  ;; of slow completions nobody asked for.  Nothing is sent unless a key is hit.
+  ;;
+  ;;   C-c i  one suggestion, here, now
+  ;;   C-c I  toggle the automatic mode on for this buffer, when it is wanted
+  ;;
+  (global-set-key (kbd "C-c i") #'minuet-show-suggestion)
+  (global-set-key (kbd "C-c I") #'minuet-auto-suggestion-mode)
+
+  ;; Dropping the hook only governs buffers opened from now on.
+  ;; `minuet--setup-auto-suggestion' adds `minuet--maybe-show-suggestion' to
+  ;; `post-command-hook' with the buffer-local flag, so any buffer that already
+  ;; had the mode keeps requesting until told otherwise.
+  (defun my/minuet-auto-suggestion-off-everywhere ()
+    "Turn `minuet-auto-suggestion-mode' off in every live buffer."
+    (interactive)
+    (let ((n 0))
+      (dolist (buf (buffer-list))
+        (with-current-buffer buf
+          (when (bound-and-true-p minuet-auto-suggestion-mode)
+            (minuet-auto-suggestion-mode -1)
+            (setq n (1+ n)))))
+      (message "Disabled minuet auto-suggestion in %d buffer(s)" n)))
+
+  ;; And `desktop-save-mode' (20-editing.el) records which minor modes a buffer
+  ;; had and switches them back on when the session is restored -- so the mode
+  ;; would return on every restart, in every restored buffer, even with the hook
+  ;; gone.  A nil entry here tells desktop not to restore it.
+  (with-eval-after-load 'desktop
+    (add-to-list 'desktop-minor-mode-table '(minuet-auto-suggestion-mode nil)))
 
   ;; Bound in `minuet-active-mode-map', not globally: that map is live only
   ;; while a suggestion is on screen, so M-y keeps being `yank-pop' everywhere
