@@ -29,3 +29,13 @@
 (setq-default show-trailing-whitespace t)
 
 (global-set-key [(meta +)] 'align-regexp)
+
+;; `comment-region' reads the raw prefix arg itself: a bare C-u dispatches to
+;; `uncomment-region', so C-c C-c comments and C-u C-c C-c uncomments off the
+;; one binding.
+;;
+;; Note this is global, and `C-c' followed by a control character is reserved
+;; for major modes -- go-mode, markdown-mode and friends bind C-c C-c to their
+;; own commands and their maps take precedence, so this only applies where the
+;; major mode leaves it alone.
+(global-set-key (kbd "C-c C-c") 'comment-region)
