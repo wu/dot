@@ -45,8 +45,20 @@
       (fill-paragraph)
     (eglot-format-buffer)))
 
+(defun my/go-test-repeat ()
+  "Re-run the last go test command verbatim, arguments and all.
+`go-test-current-test-cache' remembers only the test name; flags typed at
+a \\[universal-argument] prompt are rebuilt from defaults and lost.  The
+*Go Test* buffer keeps the whole command line and its directory, so
+replay that instead.  Falls back to testing the test at point."
+  (interactive)
+  (if-let* ((buf (get-buffer "*Go Test*")))
+      (with-current-buffer buf (recompile))
+    (call-interactively #'go-test-current-test)))
+
 (with-eval-after-load 'go-ts-mode
   (keymap-set go-ts-mode-map "C-c C-t" #'go-test-current-test)
+  (keymap-set go-ts-mode-map "C-c t" #'my/go-test-repeat)
   (keymap-set go-ts-mode-map "C-c C-f" #'go-test-current-file)
   (keymap-set go-ts-mode-map "C-c C-r" #'eglot-rename)
   (keymap-set go-ts-mode-map "C-c C-a" #'eglot-code-actions)
