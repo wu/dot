@@ -30,12 +30,17 @@
 
 (global-set-key [(meta +)] 'align-regexp)
 
-;; `comment-region' reads the raw prefix arg itself: a bare C-u dispatches to
-;; `uncomment-region', so C-c C-c comments and C-u C-c C-c uncomments off the
-;; one binding.
+;; Commenting is stock: `C-x C-;' (`comment-line') toggles the current line or
+;; the lines a region spans, and `M-;' (`comment-dwim') appends a trailing
+;; comment or toggles an active region.  Both are bound by default.
 ;;
-;; Note this is global, and `C-c' followed by a control character is reserved
-;; for major modes -- go-mode, markdown-mode and friends bind C-c C-c to their
-;; own commands and their maps take precedence, so this only applies where the
-;; major mode leaves it alone.
-(global-set-key (kbd "C-c C-c") 'comment-region)
+;; Use `M-;' when a region is live.  `comment-line' rounds the region out to
+;; whole lines, so a selection ending at column 0 -- what C-n leaves behind --
+;; also comments the line below it.  `comment-dwim' passes the bounds through
+;; untouched and stops where the selection does.
+;;
+;; This alias exists only because `C-x C-;' is an awkward chord.  `C-c' plus a
+;; plain letter is the space reserved for users, so no major mode can shadow
+;; it -- unlike `C-c C-c', which is major-mode territory and was only ever
+;; reaching us in modes that left it unbound.
+(global-set-key (kbd "C-c c") #'comment-line)
