@@ -68,6 +68,35 @@
   ;; M-x nerd-icons-install-fonts, and `nerd-icons' added to the two attribute
   ;; lists above.  Left off: it is a package and a font for decoration.
 
+  ;; --- grouping the listing by file type ---
+  ;; `dirvish-emerge-mode' is the mode from the screenshots: it splits a
+  ;; listing into titled groups.  A group is (NAME . (TYPE . VALUE)) where TYPE
+  ;; is `predicate', `extensions' or `regex'.  The predicates that ship are
+  ;; recent-files-2h, recent-files-today, directories, files, symlinks and
+  ;; executables; whatever matches nothing lands in a trailing group.
+  (setq dirvish-emerge-groups
+        '(("Recent"    (predicate . recent-files-today))
+          ("Documents" (extensions "pdf" "epub" "md" "org" "txt" "doc" "docx"))
+          ("Images"    (extensions "png" "jpg" "jpeg" "gif" "svg" "webp" "heic"))
+          ("Video"     (extensions "mp4" "mkv" "mov" "webm" "avi"))
+          ("Audio"     (extensions "mp3" "m4a" "flac" "wav" "ogg"))
+          ("Archives"  (extensions "zip" "tar" "gz" "bz2" "xz" "7z" "dmg"))))
+
+  ;; The mode itself is left off: it is buffer-local, and grouping a source
+  ;; tree is rarely the point.  M-x dirvish-emerge-mode turns it on where it is
+  ;; wanted, M-e below edits the groups and can write them into .dir-locals.el
+  ;; (`dirvish-emerge-groups' is marked safe as a local variable), and adding
+  ;; `dirvish-emerge-mode' to `dirvish-setup-hook' would turn it on everywhere.
+
+  ;; --- keys inside a dirvish buffer ---
+  ;; `dirvish-mode-map' inherits `dired-mode-map', so these reach dirvish
+  ;; buffers and nothing else.  M-t is where the preview lives: it toggles the
+  ;; full-frame layout (`dirvish-default-layout' -- parent pane, listing,
+  ;; preview pane), which the narrow side window deliberately does without.
+  (keymap-set dirvish-mode-map "TAB" #'dirvish-subtree-toggle)
+  (keymap-set dirvish-mode-map "M-t" #'dirvish-layout-toggle)
+  (keymap-set dirvish-mode-map "M-e" #'dirvish-emerge-menu)
+
   ;; Clicking a directory splits the frame, because dired binds <mouse-2> to
   ;; `dired-mouse-find-file-other-window' and its `follow-link' entry sends a
   ;; plain mouse-1 click on a filename to that same command.  Dirvish's mouse
