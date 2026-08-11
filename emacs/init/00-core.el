@@ -1,7 +1,7 @@
 ;;; 00-core.el --- appearance and server  -*- lexical-binding: t; -*-
 
 ;; Dark background theme
-(load-theme 'wombat t)
+(load-theme 'deeper-blue t)
 
 ;; Optional: set default frame appearance
 ;; `tool-bar-lines' is here as well as in the `tool-bar-mode' call below:
