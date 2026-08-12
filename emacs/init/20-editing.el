@@ -21,6 +21,30 @@
 ;; `package-user-dir' is set in 10-package.el, which loads first.
 (add-to-list 'recentf-exclude (regexp-quote package-user-dir))
 
+;; --- line numbers ---
+
+;; The in-buffer line number column, for code buffers only.  `prog-mode-hook'
+;; reaches go-ts-mode and every other language mode, since they all derive from
+;; `prog-mode'; `global-display-line-numbers-mode' would also number magit,
+;; dired and help buffers, where the column is noise.
+;;
+;; Not to be confused with `line-number-mode', on by default, which is the
+;; mode-line readout of the current line.
+;;
+;; `display-line-numbers-width-start' sizes the column from the buffer's line
+;; count when the mode turns on, so the code does not shift right the first
+;; time you scroll past line 99.
+(setq display-line-numbers-width-start t)
+(add-hook 'prog-mode-hook #'display-line-numbers-mode)
+
+;; Push the numbers well below the body text -- the default `line-number' face
+;; is bright enough to compete with the code it is labelling.
+;;
+;; This has to run after `load-theme' (00-core.el, which loads first): loading a
+;; theme applies that theme's own faces and would overwrite an earlier setting.
+;; `line-number-current-line' inherits `line-number', so it dims along with it.
+(set-face-attribute 'line-number nil :foreground "grey40")
+
 ;; --- misc ---
 
 ;; Undo/redo window layouts: C-c <left> / C-c <right>.
