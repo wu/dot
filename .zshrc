@@ -9,6 +9,7 @@ setopt				\
     extended_history		\
     glob_complete		\
     hist_ignore_all_dups	\
+    hist_ignore_space		\
     hist_reduce_blanks		\
     hist_save_no_dups		\
     hist_verify			\
