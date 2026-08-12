@@ -22,3 +22,42 @@
 ;; org-mode claims S-M-<arrow> for `org-shiftmeta*' (promote/demote, move
 ;; subtree), so the swap will not reach a window from inside an org buffer.
 (windmove-swap-states-default-keybindings '(shift meta))
+
+;; Turn a side-by-side split into a stacked one and back.
+;;
+;; Emacs 31 has this built in as `window-layout-transpose' on C-x w t, along
+;; with the flip and rotate commands on C-x w f/r/o -- and it handles any
+;; layout, not just two windows.  Define the fallback only below 31, and put it
+;; on the same key, so upgrading swaps in the better command silently.
+;;
+;; Note that hi-lock claims the C-x w prefix for its highlight commands once it
+;; is loaded; C-x w t is free within it, but C-h k here if a conflict shows up.
+(unless (fboundp 'window-layout-transpose)
+  (defun toggle-window-split ()
+    "Swap a horizontal split of two windows for a vertical one, or back."
+    (interactive)
+    (unless (= (count-windows) 2)
+      (user-error "Works only on exactly two windows"))
+    (let* ((this-win-buffer (window-buffer))
+           (next-win-buffer (window-buffer (next-window)))
+           (this-win-edges (window-edges (selected-window)))
+           (next-win-edges (window-edges (next-window)))
+           ;; Which of the two is on the left/top decides where the buffers land
+           ;; after the re-split.
+           (this-win-2nd (not (and (<= (car this-win-edges) (car next-win-edges))
+                                   (<= (cadr this-win-edges) (cadr next-win-edges)))))
+           ;; Equal left edges mean the split is horizontal, so re-split the
+           ;; other way.
+           (splitter (if (= (car this-win-edges) (car next-win-edges))
+                         'split-window-horizontally
+                       'split-window-vertically)))
+      (delete-other-windows)
+      (let ((first-win (selected-window)))
+        (funcall splitter)
+        (when this-win-2nd (other-window 1))
+        (set-window-buffer (selected-window) this-win-buffer)
+        (set-window-buffer (next-window) next-win-buffer)
+        (select-window first-win)
+        (when this-win-2nd (other-window 1)))))
+
+  (keymap-global-set "C-x w t" #'toggle-window-split))
