@@ -21,6 +21,36 @@
 ;; `package-user-dir' is set in 10-package.el, which loads first.
 (add-to-list 'recentf-exclude (regexp-quote package-user-dir))
 
+;; --- backups and auto-saves ---
+
+;; Keep edited directories clean: `foo~' backups and `#foo#' auto-saves live
+;; under ~/.emacs.d rather than beside the file they belong to.
+;;
+;; `user-emacs-directory' rather than a literal path, so this follows Emacs to
+;; ~/.config/emacs if this config is ever installed there instead.
+(let ((backup-dir (expand-file-name "backups/" user-emacs-directory))
+      (auto-save-dir (expand-file-name "auto-saves/" user-emacs-directory)))
+  ;; Emacs makes the backup directory on demand but not the auto-save one, so
+  ;; make both here.  The second argument means "parents, and no error if it
+  ;; already exists", which is the case on every start after the first.
+  (make-directory backup-dir t)
+  (make-directory auto-save-dir t)
+
+  ;; The alist maps a file-name regexp to the directory its backups go in;
+  ;; "." matches every file.
+  (setq backup-directory-alist `(("." . ,backup-dir)))
+
+  ;; Auto-saves take a regexp plus a replacement instead.  The trailing t is
+  ;; UNIQUIFY: the name is built from the buffer's whole path with the
+  ;; separators turned into `!', so ~/a/foo.go and ~/b/foo.go get one
+  ;; auto-save file each instead of fighting over a shared #foo.go#.
+  (setq auto-save-file-name-transforms `((".*" ,auto-save-dir t))))
+
+;; Lock files (the `.#foo' symlinks) are deliberately left in place: they are
+;; how a second Emacs -- or another editor -- notices the file is already being
+;; edited, which only works if the lock sits next to the file.  They are
+;; removed as soon as the buffer is saved or reverted.
+
 ;; --- line numbers ---
 
 ;; The in-buffer line number column, for code buffers only.  `prog-mode-hook'
