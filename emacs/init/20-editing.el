@@ -75,6 +75,21 @@
 ;; `line-number-current-line' inherits `line-number', so it dims along with it.
 (set-face-attribute 'line-number nil :foreground "grey40")
 
+;; --- prompts ---
+
+;; The prompts that want a spelled-out "yes<RET>" come from `yes-or-no-p',
+;; which Emacs uses where a mistyped `y' would cost something -- killing a
+;; modified buffer, deleting files in dired, quitting with unsaved work.  This
+;; makes them all take a single `y' or `n' instead, the same as `y-or-n-p'.
+;;
+;; This is the supported switch rather than aliasing `yes-or-no-p' to
+;; `y-or-n-p': `yes-or-no-p' reads the variable itself, so callers that go
+;; through it -- including ones that check which of the two they are using --
+;; keep working, and `read-answer' follows along through its own
+;; `read-answer-short' default of `auto'.
+(setq use-short-answers t)
+
+
 ;; --- misc ---
 
 ;; Undo/redo window layouts: C-c <left> / C-c <right>.
