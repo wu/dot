@@ -14,6 +14,49 @@
       magit-bury-buffer-function #'magit-restore-window-configuration)
 
 
+;; --- section visibility ---
+
+;; File sections in the status buffer are created collapsed -- but only when
+;; nothing overrides that.  `magit-section-cached-visibility' runs first, off
+;; `magit-section-set-visibility-hook', and returns whatever state the section
+;; last had; expanding a file records `show' under its identity in
+;; `magit-section-visibility-cache', which is buffer-local and permanent-local.
+;; So a file read once stays expanded for the life of the status buffer, and
+;; the next batch of changes to it opens already showing the diff.
+;;
+;; That cache is also what carries expansion across a refresh: with
+;; `magit-section-preserve-visibility' at its default t, the fallback that
+;; copies visibility from the pre-refresh section tree is disabled.  Dropping
+;; `file' from `magit-section-cache-visibility' would therefore re-collapse the
+;; file on every `g' and after every staged hunk.
+;;
+;; So clear only the diff entries, and only in `magit-setup-buffer-hook' --
+;; which runs on `magit-status', after the mode is set and just before the
+;; buffer's content is generated, not on a plain refresh.  Each visit starts
+;; with everything collapsed; expansions still survive staging and `g' until
+;; the next `C-c m'.
+;;
+;; To collapse again mid-visit, `M-2' (`magit-section-show-level-2-all') shows
+;; every section down to level two -- the file headings -- and hides their
+;; bodies.  `M-1' goes one further, leaving just the top-level headings.
+(defun my/magit-forget-diff-visibility ()
+  "Drop cached expansion state for diff sections in the current buffer."
+  (when (derived-mode-p 'magit-status-mode)
+    (setq magit-section-visibility-cache
+          (seq-remove (lambda (entry)
+                        ;; ENTRY is (IDENT . STATE) and IDENT is
+                        ;; ((TYPE . VALUE)...) from the section outwards, so
+                        ;; the section's own type is the caar of the ident.
+                        (memq (car (caar entry)) '(file module hunk)))
+                      magit-section-visibility-cache))))
+
+;; After the load, not before: `add-hook' binds the hook variable if it is
+;; still void, and `defcustom' skips its standard value for an already-bound
+;; symbol -- which would silently drop magit's own two entries on that hook.
+(with-eval-after-load 'magit-mode
+  (add-hook 'magit-setup-buffer-hook #'my/magit-forget-diff-visibility))
+
+
 ;; --- diffs ---
 
 ;; Syntax-highlight hunks instead of painting every line one flat red or green.
