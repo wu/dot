@@ -330,7 +330,92 @@ with ARGS."
   ;; for the same purpose.  Set inside the eval-after-load so consult's own
   ;; defcustom does not overwrite it at load time.
   (with-eval-after-load 'consult
-    (setq consult-buffer-list-function #'tabspaces--buffer-list)))
+    (setq consult-buffer-list-function #'tabspaces--buffer-list))
+
+  ;; --- the file row ---
+  ;; A second row on the tab bar, under the row of project tabs, listing the
+  ;; files open in the workspace the selected tab holds.  Clicking a name
+  ;; switches to it.
+  ;;
+  ;; `tab-line-mode' is the built-in that shows a bar of buffers, and it is not
+  ;; what is wanted here: the tab line belongs to a window, so a split draws it
+  ;; once per window.  The tab bar belongs to the frame -- one bar across the
+  ;; top however the windows are arranged -- so the row goes there instead.
+  ;;
+  ;; The bar is not a fixed number of rows.  Redisplay concatenates the items'
+  ;; captions into one string and draws it a line at a time
+  ;; (`build_desired_tab_bar_string' and `display_tab_bar_line', xdisp.c), so a
+  ;; caption holding a newline ends the row and starts another, and
+  ;; `auto-resize-tab-bars' (t by default) grows the bar to fit.  A long file
+  ;; list wraps onto a third row the same way.  `tab-bar-truncate', a C
+  ;; variable, would draw the first row only; it defaults to nil.
+
+  ;; `tabspaces--buffer-list' is the workspace's buffers, the same list C-x b
+  ;; is filtered through above.  Sorted because it filters `buffer-list',
+  ;; which is ordered by recency: unsorted, the row would reshuffle itself on
+  ;; every buffer switch.  Filtered on `buffer-file-name', which is what drops
+  ;; *scratch*, the sidebar, magit and the rest -- this row is about files.
+  (defun my/tab-bar-workspace-files ()
+    "Return the current workspace's file buffers, ordered by name."
+    (sort (seq-filter #'buffer-file-name (tabspaces--buffer-list))
+          (lambda (a b) (string< (buffer-name a) (buffer-name b)))))
+
+  ;; An entry in `tab-bar-format' returns either a string or a list of
+  ;; menu-items (tab-bar.el).  Items are what the tabs themselves are made of,
+  ;; and they are clickable, so each file is one: its caption is the label, its
+  ;; binding is the command run on a click, and `:help' is the tooltip -- the
+  ;; full path, since the label is only the buffer name.
+  ;; Nil when the workspace holds no files, so a fresh tab on *scratch* keeps
+  ;; the bar one row tall instead of growing an empty one.
+  (defun my/tab-bar-format-workspace-files ()
+    "Produce a tab-bar row of the files open in the current workspace."
+    (let ((files (my/tab-bar-workspace-files))
+          (current (current-buffer))
+          (i 0))
+      (when files
+        (append
+         ;; Ends the row of tabs.  What follows is drawn on the next one.
+         '((files-row menu-item "\n" ignore))
+         (mapcan
+          (lambda (buf)
+            (setq i (1+ i))
+            `((,(intern (format "file-%i" i))
+               menu-item
+               ,(propertize (concat " " (buffer-name buf) " ")
+                            'face (if (eq buf current)
+                                      'my/tab-bar-file-current
+                                    'my/tab-bar-file))
+               ,(lambda () (interactive) (switch-to-buffer buf))
+               :help ,(buffer-file-name buf))))
+          files)))))
+
+  ;; Appended rather than inserted: the newline has to come after everything
+  ;; else in the format, or those items are the ones that move to the second
+  ;; row.  For the same reason the row cannot follow
+  ;; `tab-bar-format-align-right', which measures every item after it to work
+  ;; out where "right" starts -- worth remembering if a clock is ever added.
+  ;;
+  ;; `add-to-list' rather than appending to the value, so re-evaluating this
+  ;; file while tweaking the row does not stack up a copy per evaluation.
+  ;;
+  ;; The function reads the selected frame's workspace, so each frame and each
+  ;; tab shows its own files with no per-frame state of our own.
+  (add-to-list 'tab-bar-format #'my/tab-bar-format-workspace-files t)
+
+  ;; `tab-bar-auto-width' spreads the bar's width evenly across the tabs, and
+  ;; works out what is left over by concatenating the captions of every item it
+  ;; will not resize and subtracting their pixel width from the frame's
+  ;; (`tab-bar-auto-width', tab-bar.el).  The file row is made of exactly such
+  ;; items, so a workspace with a few files open would push the project tabs
+  ;; down to `tab-bar-auto-width-min'.  Off: tabs are then as wide as their
+  ;; names, which in a fixed-width font is what they would have been anyway.
+  ;;
+  ;; One thing left undone: the bar is rebuilt during redisplay, which a buffer
+  ;; switch already triggers.  Should the highlighted file ever lag behind the
+  ;; current buffer, adding `force-mode-line-update' to
+  ;; `window-buffer-change-functions' is the fix -- it runs once per frame
+  ;; whose windows changed buffer, which is when this row can go stale.
+  (setq tab-bar-auto-width nil))
 
 
 ;;; --- the tab bar itself ---
@@ -371,3 +456,24 @@ with ARGS."
 (when (facep 'tab-bar-tab-highlight)
   (set-face-attribute 'tab-bar-tab-highlight nil
                       :background "#a992d4" :foreground "#1c1c1c" :box nil))
+
+;; The file row (`my/tab-bar-format-workspace-files' above) gets faces of its
+;; own rather than borrowing the tab faces.  Putting the lavender on both rows
+;; would cost it the one thing it says -- which project this frame is in -- so
+;; the row sits in greys and spends the lavender on the file being edited,
+;; where it reads as "here" against the rest.
+;;
+;; The inactive background is the bar's own, so those names read as labels on
+;; the bar rather than as a second set of tabs; the current file gets the same
+;; lift the unselected tabs have above.
+;;
+;; `defface' rather than the `set-face-attribute' calls above: these are new
+;; faces, so there is no theme setting to overwrite and nothing to sequence
+;; after `load-theme'.
+(defface my/tab-bar-file
+  '((t :background "#1c1c1c" :foreground "#808080" :box nil))
+  "Face for a file in the tab bar's file row.")
+
+(defface my/tab-bar-file-current
+  '((t :background "#2f2f2f" :foreground "#c8b6e6" :box nil))
+  "Face for the file being edited, in the tab bar's file row.")
