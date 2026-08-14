@@ -6,7 +6,7 @@
 ;; --- windows ---
 
 ;; Status replaces the buffer in the selected window rather than splitting it,
-;; so `winner-undo' steps back to whatever was being edited there.  Diffs, logs
+;; so `tab-bar-history-back' steps back to what was being edited there.  Diffs, logs
 ;; and commit buffers still get their own windows -- they are meant to be read
 ;; alongside the status buffer.  `q' also restores the pre-magit layout.
 (setq magit-display-buffer-function

@@ -54,9 +54,13 @@
   ;; `dired-jump' and the sidebar are all the same thing.
   (dirvish-override-dired-mode 1)
 
-  ;; The sidebar points at the current buffer's project and re-points itself
-  ;; when the current buffer moves to another one.
-  (dirvish-side-follow-mode 1)
+  ;; The sidebar points at the current buffer's project and, with follow mode
+  ;; on, re-points itself whenever the current buffer moves to another one --
+  ;; which is exactly what makes it wander off the project as soon as a file
+  ;; from elsewhere is opened.  Left off: the workspace decides which project
+  ;; the tab is about (29-workspaces.el), and the sidebar stays where it was
+  ;; opened.  `C-c t' re-points it deliberately.
+  (dirvish-side-follow-mode -1)
 
   ;; The side window is narrow: the VC state in the fringe and the expansion
   ;; arrow are all that fit.  A full-frame session has room for more.

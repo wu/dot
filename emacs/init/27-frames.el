@@ -5,7 +5,7 @@
 ;;
 ;; This costs shift-selection of a region with the arrow keys; pass a modifier
 ;; -- (windmove-default-keybindings 'meta) -- to keep it.  C-c <arrow> is not
-;; free either, winner-mode has it (20-editing.el).
+;; free either, `tab-bar-history-mode' has it (20-editing.el).
 ;;
 ;; Confined to the selected frame: `windmove' resolves direction through
 ;; `window-in-direction', which does not look at other frames.

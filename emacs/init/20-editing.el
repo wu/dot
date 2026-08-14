@@ -93,7 +93,35 @@
 ;; --- misc ---
 
 ;; Undo/redo window layouts: C-c <left> / C-c <right>.
-(winner-mode 1)
+;;
+;; `tab-bar-history-mode' rather than `winner-mode', which held these keys
+;; before.  Winner keeps one ring per frame -- `winner-ring-size' is documented
+;; in those words -- and knows nothing about tabs.  With a tab per project
+;; (29-workspaces.el) a tab switch is itself a window configuration change, so
+;; the ring ends up interleaving every workspace's layouts and an undo in one
+;; project can restore another project's windows into it.
+;;
+;; This mode keeps the history in the tab, swapping it in and out as tabs are
+;; selected, so undo stays inside the workspace it was invoked in.  The
+;; `tab-bar-mode' docstring recommends it over winner for exactly this reason,
+;; and it binds the same two keys, so nothing downstream changes.
+;;
+;; The depth is `tab-bar-history-limit', 10 against winner's 200 -- but 10 per
+;; tab rather than 10 for the whole frame.  Raise it here if that bites.
+;;
+;; tab-bar.el carries no autoload cookies, so require it before the call.
+(require 'tab-bar)
+(tab-bar-history-mode 1)
+
+;; Let the last key of a sequence repeat on its own: after C-c <left>, a bare
+;; <left> steps back again, <right> forward.  `tab-bar-history-repeat-map'
+;; declares those two with `:repeat t', which is what `repeat-mode' reads.
+;;
+;; This is global, not a tab-bar feature -- it activates every repeat map that
+;; ships with Emacs, so C-x o, C-x {, C-x ^ and the undo commands all gain the
+;; same one-key continuation.  `repeat-exit-key' or M-x repeat-mode backs it
+;; out if that turns out to be more than was wanted.
+(repeat-mode 1)
 
 (setq-default show-trailing-whitespace t)
 
