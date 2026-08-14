@@ -369,8 +369,12 @@ with ARGS."
   ;; the bar one row tall instead of growing an empty one.
   (defun my/tab-bar-format-workspace-files ()
     "Produce a tab-bar row of the files open in the current workspace."
+    ;; `window-buffer' of the frame's selected window rather than
+    ;; `current-buffer': that is the buffer whose file the row should point at,
+    ;; and it is right whatever happens to be current when redisplay gets round
+    ;; to building the bar.
     (let ((files (my/tab-bar-workspace-files))
-          (current (current-buffer))
+          (current (window-buffer (frame-selected-window)))
           (i 0))
       (when files
         (append
@@ -381,10 +385,19 @@ with ARGS."
             (setq i (1+ i))
             `((,(intern (format "file-%i" i))
                menu-item
-               ,(propertize (concat " " (buffer-name buf) " ")
-                            'face (if (eq buf current)
-                                      'my/tab-bar-file-current
-                                    'my/tab-bar-file))
+               ;; Brackets rather than the padding spaces on the file being
+               ;; edited, so the two states differ in their text and not only
+               ;; in a face.  The label is the same width either way, so the
+               ;; row does not shift as the marker moves.
+               ,(let ((current-p (eq buf current)))
+                  (propertize (concat my/tab-bar-padding
+                                      (if current-p "[" " ")
+                                      (buffer-name buf)
+                                      (if current-p "]" " ")
+                                      my/tab-bar-padding)
+                              'face (if current-p
+                                        'my/tab-bar-file-current
+                                      'my/tab-bar-file)))
                ,(lambda () (interactive) (switch-to-buffer buf))
                :help ,(buffer-file-name buf))))
           files)))))
@@ -408,14 +421,47 @@ with ARGS."
   ;; (`tab-bar-auto-width', tab-bar.el).  The file row is made of exactly such
   ;; items, so a workspace with a few files open would push the project tabs
   ;; down to `tab-bar-auto-width-min'.  Off: tabs are then as wide as their
-  ;; names, which in a fixed-width font is what they would have been anyway.
+  ;; names, which is why they want padding of their own (see the tab-name
+  ;; padding at the end of this file).
+  (setq tab-bar-auto-width nil)
+
+  ;; Redisplay rebuilds the tab bar only when it believes the bar could have
+  ;; changed: windows or buffers changed, or a mode line was forced to update
+  ;; (`update_tab_bar', xdisp.c, whose comment names `force-mode-line-update'
+  ;; as the supported way to ask for a recompute).  Selecting a tab qualifies,
+  ;; which is why the highlight is right on arriving at a tab and then stops
+  ;; moving as files are switched underneath it.
   ;;
-  ;; One thing left undone: the bar is rebuilt during redisplay, which a buffer
-  ;; switch already triggers.  Should the highlighted file ever lag behind the
-  ;; current buffer, adding `force-mode-line-update' to
-  ;; `window-buffer-change-functions' is the fix -- it runs once per frame
-  ;; whose windows changed buffer, which is when this row can go stale.
-  (setq tab-bar-auto-width nil))
+  ;; The request has to be made before redisplay begins, which is why the
+  ;; window-change hooks are the wrong place for it: `redisplay_internal' calls
+  ;; `prepare_menu_bars' -- and so `update_tab_bar' -- early, runs the window
+  ;; change functions late (xdisp.c:17573), and then clears `update_mode_lines'
+  ;; and `windows_or_buffers_changed' at the end of the same pass
+  ;; (xdisp.c:18151).  A flag raised from those hooks is therefore wiped before
+  ;; anything reads it, so the row never gets its rebuild.
+  ;;
+  ;; `post-command-hook' runs before the redisplay that follows the command, so
+  ;; the flag is still standing when `update_tab_bar' looks.
+  ;;
+  ;; Only when the buffer actually changed: `force-mode-line-update' with t
+  ;; also sets `prevent_redisplay_optimizations_p', and paying that on every
+  ;; keystroke is how a config makes a large file feel slow.  The last buffer
+  ;; is kept in a frame parameter rather than a variable so that two frames
+  ;; showing different buffers do not mask each other's changes.
+  (defun my/tab-bar-refresh-file-row ()
+    "Rebuild the tab bar when the selected window's buffer has changed."
+    (let ((buffer (window-buffer (frame-selected-window))))
+      (unless (eq buffer (frame-parameter nil 'my/tab-bar-file-row-buffer))
+        (set-frame-parameter nil 'my/tab-bar-file-row-buffer buffer)
+        (force-mode-line-update t))))
+
+  (add-hook 'post-command-hook #'my/tab-bar-refresh-file-row)
+
+  ;; Keep that frame parameter out of desktop's frameset, the same way and for
+  ;; the same reason as the `tabs' parameter above: its value is a buffer
+  ;; object, which has no readable printed representation, and desktop would be
+  ;; writing one into ~/.emacs.d/.emacs.desktop to choke on at startup.
+  (setf (alist-get 'my/tab-bar-file-row-buffer frameset-filter-alist) :never))
 
 
 ;;; --- the tab bar itself ---
@@ -426,12 +472,17 @@ with ARGS."
 ;; On a dark background the stock faces separate the selected tab from the rest
 ;; by `grey40' against `grey20' (tab-bar.el), which is not much of a signal
 ;; when the point of the tab bar here is knowing which project you are in.
-;; Lavender on the selected tab; the rest a shade lighter than the frame
-;; background, so they still read as tabs rather than dissolving into the bar.
+;; Lavender marks the selected tab, and it marks it in the text rather than in
+;; a block behind it -- so the bar stays flat and the two rows say "here" the
+;; same way, the file row with its brackets and the tabs with their colour.
 ;;
-;; `:box nil' drops the stock released-button border: a flat block of colour
-;; reads more clearly than a raised grey one, and the border is what makes the
-;; selected and unselected tabs nearly the same shape.
+;; A filled block was the first attempt and it swallowed the close button:
+;; `tab-bar-tab-name-format-close-button' appends " x" outside the padding, so
+;; on the selected tab it landed at the very edge of the lavender in the same
+;; dark ink as the name.  Coloured text puts the x back in plain sight.
+;;
+;; `:box nil' drops the stock released-button border, which would otherwise
+;; draw the outline of a block this no longer paints.
 ;;
 ;; These run after `load-theme' (00-core.el, loaded first), which is what makes
 ;; them stick -- a theme applies its own faces and would otherwise overwrite
@@ -439,23 +490,71 @@ with ARGS."
 (set-face-attribute 'tab-bar nil
                     :background "#1c1c1c" :foreground "#d0d0d0" :box nil)
 
+;; Both tab faces take the bar's own background, so neither draws a block and
+;; the difference between them is entirely in the ink: lavender for the tab you
+;; are in, a muted grey for the others -- the same grey the file row gives the
+;; files you are not editing.
+;;
 ;; Weight stays `normal': bold is wider than regular in Anonymous Pro
 ;; (00-core.el), so bolding the selected tab reflows every tab after it and the
 ;; bar shifts on each switch.  The colour is doing the work anyway.
 (set-face-attribute 'tab-bar-tab nil
-                    :background "#c8b6e6" :foreground "#1c1c1c"
+                    :background "#1c1c1c" :foreground "#c8b6e6"
                     :weight 'normal :box nil)
 
 (set-face-attribute 'tab-bar-tab-inactive nil
-                    :background "#2f2f2f" :foreground "#b0b0b0"
+                    :background "#1c1c1c" :foreground "#808080"
                     :weight 'normal :box nil)
 
 ;; The mouse-hover face is Emacs 31; on 30 it does not exist and
 ;; `set-face-attribute' would signal.  Without this, hovering a tab reverts to
-;; the stock grey and flickers against the lavender.
+;; the stock grey block.  A faint lift of the background is enough to show the
+;; tab is live under the pointer now that nothing else in the bar is filled.
 (when (facep 'tab-bar-tab-highlight)
   (set-face-attribute 'tab-bar-tab-highlight nil
-                      :background "#a992d4" :foreground "#1c1c1c" :box nil))
+                      :background "#2f2f2f" :foreground "#e6dcf5" :box nil))
+
+;; With `tab-bar-auto-width' off -- it had to go for the file row to fit -- a
+;; tab is exactly as wide as its name, so one name ends where the next begins
+;; and the row reads as crowded.  Pad the names.
+;;
+;; `tab-bar-tab-name-format-functions' (Emacs 30) is a pipeline: each stage
+;; takes the name so far and returns the next.  Padding goes at the front, so
+;; `tab-bar-tab-name-format-face' -- the stage that puts the tab's face on the
+;; whole string -- covers the padding too, which is what would matter again if
+;; the tabs ever go back to a filled background.
+;;
+;; The other knob, if this wants further tuning: `tab-bar-close-button-show'
+;; governs the " x" the close button appends after the padding on the right of
+;; every tab, and nil drops it -- along with the misclick that closes a
+;; workspace.
+(defvar my/tab-bar-padding "  "
+  "Padding put on each side of a label in the tab bar.
+Read by `my/tab-bar-pad-tab-name' for the tabs and by
+`my/tab-bar-format-workspace-files' for the file row, so that the two
+rows stay in step.  This is the one place to widen or tighten them.")
+
+(defun my/tab-bar-pad-tab-name (name _tab _i)
+  "Pad tab NAME with `my/tab-bar-padding' on each side."
+  (concat my/tab-bar-padding name my/tab-bar-padding))
+
+(when (boundp 'tab-bar-tab-name-format-functions)
+  (add-to-list 'tab-bar-tab-name-format-functions #'my/tab-bar-pad-tab-name))
+
+;; Padding widens the coloured blocks; this is the gap between them, drawn in
+;; the bar's own background.  Both are needed to stop the tabs reading as one
+;; run of colour: without a gap, the selected tab's lavender sits flush against
+;; its neighbour's grey no matter how roomy each block is.  `tab-bar-separator'
+;; is a single space in a GUI frame by default, and a "|" on a terminal, which
+;; this replaces with spaces there too -- the faces above set backgrounds, and
+;; those do render on a terminal, so the blocks still read as separate without
+;; the divider.
+;;
+;; Set unconditionally rather than under `(window-system)': with a daemon
+;; (emacsclient, the aliases) init runs on the initial terminal frame, where
+;; that test is nil, and the setting would never be reached for the GUI frames
+;; that come later.
+(setq tab-bar-separator "  ")
 
 ;; The file row (`my/tab-bar-format-workspace-files' above) gets faces of its
 ;; own rather than borrowing the tab faces.  Putting the lavender on both rows
@@ -474,6 +573,8 @@ with ARGS."
   '((t :background "#1c1c1c" :foreground "#808080" :box nil))
   "Face for a file in the tab bar's file row.")
 
+;; Flat, like the tabs above: the brackets in the label are what mark the file
+;; being edited, and the colour agrees with them rather than boxing it in.
 (defface my/tab-bar-file-current
-  '((t :background "#2f2f2f" :foreground "#c8b6e6" :box nil))
+  '((t :background "#1c1c1c" :foreground "#c8b6e6" :box nil))
   "Face for the file being edited, in the tab bar's file row.")
