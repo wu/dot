@@ -41,5 +41,7 @@ autoload -U compinit && compinit
 alias g="git"
 alias k="kubectl"
 alias ll="ls -la"
-alias ec="emacsclient"
-alias emacs="emacsclient"
+
+# emacsclient, backgrounded and disowned so the shell stays free
+emacs() { emacsclient "$@" &! }
+alias ec="emacs"
