@@ -74,9 +74,12 @@ replay that instead.  Falls back to testing the test at point."
 ;; features in buffers that are already open.
 (setopt treesit-font-lock-level 4)
 
-(setq treesit-language-source-alist
-      '((go "https://github.com/tree-sitter/tree-sitter-go")
-        (gomod "https://github.com/camdencheek/tree-sitter-go-mod")))
+;; `add-to-list', not `setq': other modules register grammars in this same
+;; variable, and modules load in filename order.
+(add-to-list 'treesit-language-source-alist
+             '(go "https://github.com/tree-sitter/tree-sitter-go"))
+(add-to-list 'treesit-language-source-alist
+             '(gomod "https://github.com/camdencheek/tree-sitter-go-mod"))
 
 (defun my/treesit-install-missing ()
   "Install any grammar in `treesit-language-source-alist' not already present."
