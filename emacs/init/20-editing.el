@@ -90,6 +90,28 @@
 (setq use-short-answers t)
 
 
+;; --- the region ---
+
+;; Type or yank over an active region and it is replaced, rather than the new
+;; text landing alongside it.  Without this a `C-y' over a selection appends,
+;; and clearing the selection first with `C-w' pushes it onto the kill ring, so
+;; the yank that follows hands back the text just cut instead of the text that
+;; was meant to replace it.
+;;
+;; The replaced text is deleted, not killed: the kill ring -- and with it the
+;; clipboard entry being yanked -- is left untouched.  `undo' is what brings the
+;; replaced text back, not `C-y'.
+;;
+;; Commands opt in through a `delete-selection' property, so this reaches
+;; third-party yanks too: consult sets it on `consult-yank-pop', bound to M-y in
+;; 25-completion.el.
+;;
+;; Backspace over a region already worked this way -- `delete-active-region'
+;; defaults to t, and deletes rather than kills for the same reason -- so this
+;; is that rule extended to insertion.
+(delete-selection-mode 1)
+
+
 ;; --- misc ---
 
 ;; Undo/redo window layouts: C-c <left> / C-c <right>.
