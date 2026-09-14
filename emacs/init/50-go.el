@@ -75,7 +75,10 @@ replay that instead.  Falls back to testing the test at point."
 (setopt treesit-font-lock-level 4)
 
 ;; `add-to-list', not `setq': other modules register grammars in this same
-;; variable, and modules load in filename order.
+;; variable, and modules load in filename order.  The `require' is what makes
+;; that safe -- treesit.el is not preloaded, and the variable is a bare
+;; `defvar', so it is void until the library is loaded.
+(require 'treesit)
 (add-to-list 'treesit-language-source-alist
              '(go "https://github.com/tree-sitter/tree-sitter-go"))
 (add-to-list 'treesit-language-source-alist
