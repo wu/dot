@@ -34,3 +34,4 @@
      (message "init: %s failed: %s"
               (file-name-nondirectory file)
               (error-message-string err)))))
+(put 'downcase-region 'disabled nil)
