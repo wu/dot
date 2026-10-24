@@ -81,6 +81,42 @@
 (setq magit-diff-fontify-hunk 'all
       magit-diff-refine-hunk 'all)
 
+;; The buffer the hunk is fontified in comes from `magit-find-file-noselect'.
+;; For a revision or the index that is a hidden, volatile blob buffer which
+;; magit prunes itself; for the worktree side -- every unstaged hunk, so every
+;; status refresh, including the one a commit triggers -- it is a plain
+;; `find-file-noselect' of the real file, which nothing ever kills.  Those
+;; buffers then pile up in the buffer list, get saved by `desktop-save-mode',
+;; and start eglot for any Go file among them.
+;;
+;; So note each worktree buffer that fontification had to create, and kill it
+;; once the command is over.  Waiting for idle rather than killing after each
+;; hunk lets a file's other hunks reuse the buffer within the same refresh.
+;; Buffers that were already open are left alone.
+(defvar my/magit--syntax-buffers nil
+  "File buffers visited only to fontify diff hunks, pending a kill.")
+
+(defun my/magit--kill-syntax-buffers ()
+  (dolist (buf my/magit--syntax-buffers)
+    (when (and (buffer-live-p buf) (not (buffer-modified-p buf)))
+      (kill-buffer buf)))
+  (setq my/magit--syntax-buffers nil))
+
+(defun my/magit--track-syntax-buffer (fn hunk side rev file)
+  (if (or (not (equal rev "{worktree}"))
+          (find-buffer-visiting (expand-file-name file (magit-toplevel))))
+      (funcall fn hunk side rev file)
+    (prog1 (funcall fn hunk side rev file)
+      (when-let* ((buf (find-buffer-visiting
+                        (expand-file-name file (magit-toplevel)))))
+        (unless my/magit--syntax-buffers
+          (run-with-idle-timer 0 nil #'my/magit--kill-syntax-buffers))
+        (push buf my/magit--syntax-buffers)))))
+
+(with-eval-after-load 'magit-diff
+  (advice-add 'magit-diff--get-hunk-syntax
+              :around #'my/magit--track-syntax-buffer))
+
 ;; Magit's stock hunk backgrounds assume the flat foreground we just turned
 ;; off: at #335533 under #1c1c1c they are strong enough to fight wombat's
 ;; syntax colors for the text.  Dim them to a tint that still reads as "green
