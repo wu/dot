@@ -119,23 +119,34 @@
 
   (add-hook 'after-init-hook #'my/tabspaces-drop-placeholder-workspaces t)
 
-  ;; Key dirvish sessions to the tab's name rather than its position.
+  ;; Key dirvish sessions to an id that belongs to the tab.
   ;;
   ;; `dirvish--scopes' stamps each dirvish buffer with
   ;; `tab-bar--current-tab-index' (dirvish.el), and `dirvish-winbuf-change-h'
-  ;; kills the session's buffers and rebuilds whenever the stamp stops matching
-  ;; the current tab.  Closing a tab shifts the index of every tab after it, so
-  ;; dirvish decides all of those sidebars have moved and tears them down --
-  ;; which is what breaks the other tabs' sidebars when one workspace is
-  ;; closed.
+  ;; rebuilds the session whenever the stamp stops matching the current tab.
+  ;; Closing a tab shifts the index of every tab after it, so the index will
+  ;; not do.
   ;;
-  ;; A name is stable across closing and reordering.  It has to be interned
-  ;; rather than left a string: `dirvish--get-session' compares the stamp with
-  ;; `eq', which two equal strings fail.  Renaming a workspace now looks like a
-  ;; tab change and rebuilds its sidebar, which is the rarer event.
+  ;; The tab's name will not do either.  A tab nobody named -- C-x t 2, the
+  ;; first tab of a frame -- takes its name from the selected window's buffer,
+  ;; so the name changes the moment the sidebar is opened or selected.  The
+  ;; rebuild is the problem: it calls `dirvish--new' with no arguments, which
+  ;; replaces a sidebar with a default session.  Only a side session sends
+  ;; files to the neighbouring window, so a default one opens them in the
+  ;; sidebar itself.
+  ;;
+  ;; `tab-bar' copies parameters it does not know about from one version of a
+  ;; tab to the next, so an id stored on the tab survives switching, renaming,
+  ;; reordering and closing its neighbours, and a new tab starts without one.
+  ;; It is an uninterned symbol because `dirvish--get-session' compares stamps
+  ;; with `eq'.
   (defun my/dirvish-tab-scope ()
-    "Return the current tab's name as a symbol, for `dirvish--scopes'."
-    (intern (or (cdr (assq 'name (tab-bar--current-tab))) "")))
+    "Return the current tab's id for `dirvish--scopes', assigning one if needed."
+    (let ((tab (tab-bar--current-tab-find)))
+      (or (alist-get 'my/dirvish-scope (cdr tab))
+          (let ((id (gensym "tab")))
+            (nconc tab (list (cons 'my/dirvish-scope id)))
+            id))))
 
   (with-eval-after-load 'dirvish
     (setq dirvish--scopes
@@ -149,8 +160,8 @@
   ;; same place.
   ;;
   ;; This works because dirvish already scopes its sessions by tab:
-  ;; `dirvish--scopes' maps :tab to `tab-bar--current-tab-index' (dirvish.el),
-  ;; and `dirvish--get-session' will only match a session whose buffer belongs
+  ;; `dirvish--scopes' maps :tab to `my/dirvish-tab-scope' (above), and
+  ;; `dirvish--get-session' will only match a session whose buffer belongs
   ;; to the current tab.  So each workspace gets its own side session on its
   ;; own directory instead of all of them sharing one.
   ;;
