@@ -27,6 +27,9 @@ HISTFILE=~/.zshhistory
 HISTSIZE=10000
 SAVEHIST=10000
 
+# treat / as a word separator, so alt+f/alt+b stop at each path component
+WORDCHARS=${WORDCHARS//\/}
+
 # custom prompt
 autoload -Uz vcs_info
 fpath=(~/dot/.zsh $fpath)
