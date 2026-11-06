@@ -343,6 +343,46 @@ with ARGS."
   (with-eval-after-load 'consult
     (setq consult-buffer-list-function #'tabspaces--buffer-list))
 
+  ;; --- files open in their own project's workspace ---
+  ;; Opening a file that belongs to another open workspace switches to that
+  ;; workspace and shows it there, leaving the current tab untouched.  A file
+  ;; whose project has no workspace, or that has no project, opens in place.
+  ;;
+  ;; `find-file' ends in `pop-to-buffer-same-window', so `display-buffer-alist'
+  ;; sees it.  `display-buffer-in-tab' selects the named tab and, unless the
+  ;; buffer is already visible there, returns nil, which hands over to the next
+  ;; action -- the caller's own same-window display, now in the selected tab.
+  ;;
+  ;; A file already in this workspace stays, so one pulled in on purpose (C-x b
+  ;; then "o") is not chased back out.  That route is `switch-to-buffer', which
+  ;; ignores this entry.  So do Consult's other file commands: leave
+  ;; `switch-to-buffer-obey-display-actions' off, or this also fires on Consult
+  ;; previews and during the session restore.
+  ;;
+  ;; Roots go through `file-truename' because the map's keys come from the
+  ;; project prompt and `project-root' need not spell a directory the same way.
+  (defun my/file-workspace (buffer &rest _)
+    "Return the name of the other workspace that owns BUFFER's file, or nil.
+Both the condition and the `tab-name' of the `display-buffer-alist' entry."
+    (let ((buffer (get-buffer buffer)))
+      (when-let* ((file (buffer-file-name buffer))
+                  ((not (memq buffer (tabspaces--buffer-list))))
+                  (project (project-current nil (file-name-directory file)))
+                  (root (file-truename (project-root project)))
+                  (tab (cdr (assoc root tabspaces-project-tab-map
+                                   (lambda (key dir)
+                                     (equal (file-truename key) dir)))))
+                  ((not (equal tab (tabspaces--current-tab-name))))
+                  ((member tab (tabspaces--list-tabspaces))))
+        tab)))
+
+  (add-to-list 'display-buffer-alist
+               '(my/file-workspace (display-buffer-in-tab)
+                                   (tab-name . my/file-workspace)))
+
+  ;; emacsclient otherwise uses `switch-to-buffer' and never reaches the entry.
+  (setq server-window #'pop-to-buffer-same-window)
+
   ;; --- the file row ---
   ;; A second row on the tab bar, under the row of project tabs, listing the
   ;; files open in the workspace the selected tab holds.  Clicking a name
