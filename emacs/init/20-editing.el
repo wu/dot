@@ -159,7 +159,25 @@
 ;; untouched and stops where the selection does.
 ;;
 ;; This alias exists only because `C-x C-;' is an awkward chord.  `C-c' plus a
-;; plain letter is the space reserved for users, so no major mode can shadow
-;; it -- unlike `C-c C-c', which is major-mode territory and was only ever
-;; reaching us in modes that left it unbound.
+;; plain letter is the space reserved for users, so no major mode can shadow it.
 (global-set-key (kbd "C-c c") #'comment-line)
+
+;; `C-c C-c' toggles the active region in code buffers.  `comment-dwim' rather
+;; than `comment-or-uncomment-region', which with no active region silently
+;; acts on whatever lies between point and a stale mark.
+;;
+;; This key is major-mode territory, so it is bound from the hooks and not
+;; globally: a global binding loses to every mode that claims the key.  The
+;; hooks run after the mode has set up its map, so this deliberately replaces
+;; those claims -- e.g. `python-shell-send-buffer', `sh-case', and `conf-mode's
+;; `conf-colon-mode', which silently reinterprets the file.
+;;
+;; `local-set-key' writes to the major mode's map, which minor-mode maps outrank,
+;; so with-editor's and edit-indirect's C-c C-c "finish" keeps working in these
+;; buffers.  Text modes stay out of the list: there the key means send or commit.
+;; `yaml-ts-mode' derives from `text-mode', and `conf-mode' from neither.
+(defun my/bind-comment-key ()
+  "Bind \\`C-c C-c' to `comment-dwim' in this major mode's keymap."
+  (local-set-key (kbd "C-c C-c") #'comment-dwim))
+(dolist (hook '(prog-mode-hook conf-mode-hook yaml-ts-mode-hook))
+  (add-hook hook #'my/bind-comment-key))
