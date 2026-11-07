@@ -117,6 +117,29 @@
   (advice-add 'magit-diff--get-hunk-syntax
               :around #'my/magit--track-syntax-buffer))
 
+;; `all' above runs both passes over every hunk, and a minified file can stall
+;; Emacs on a hunk of only a few lines -- one line of a vendored bundle can be a
+;; megabyte, so diffstat's line counts don't warn of it.  Measure characters
+;; and leave such a hunk painted flat, which is all it can usefully show.  This
+;; covers `t' as well, since both values reach these two functions.
+;;
+;; Called without a hunk, each function walks the buffer and calls itself per
+;; hunk through the advised symbol, so the `T' and `t' toggles are covered too.
+(defvar my/magit-hunk-size-limit 100000
+  "Largest diff hunk, in characters, to fontify and refine.")
+
+(defun my/magit--skip-huge-hunk (fn &optional hunk &rest args)
+  (unless (and hunk
+               (> (- (eieio-oref hunk 'end) (eieio-oref hunk 'start))
+                  my/magit-hunk-size-limit))
+    (apply fn hunk args)))
+
+(with-eval-after-load 'magit-diff
+  (advice-add 'magit-diff--update-hunk-syntax
+              :around #'my/magit--skip-huge-hunk)
+  (advice-add 'magit-diff-update-hunk-refinement
+              :around #'my/magit--skip-huge-hunk))
+
 ;; Magit's stock hunk backgrounds assume the flat foreground we just turned
 ;; off: at #335533 under #1c1c1c they are strong enough to fight wombat's
 ;; syntax colors for the text.  Dim them to a tint that still reads as "green
