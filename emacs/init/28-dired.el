@@ -62,15 +62,22 @@
   ;; opened.  `C-c t' re-points it deliberately.
   (dirvish-side-follow-mode -1)
 
-  ;; The side window is narrow: the VC state in the fringe and the expansion
-  ;; arrow are all that fit.  A full-frame session has room for more.
-  (setq dirvish-side-attributes '(vc-state subtree-state)
-        dirvish-attributes '(vc-state subtree-state collapse file-size)
-        dirvish-side-width 32)
-
-  ;; File icons want `nerd-icons' in `package-selected-packages', a
-  ;; M-x nerd-icons-install-fonts, and `nerd-icons' added to the two attribute
-  ;; lists above.  Left off: it is a package and a font for decoration.
+  ;; File icons are `vscode-icon' rather than `nerd-icons': bundled PNGs, so
+  ;; there is no font to install on each machine.  The cost is that they need a
+  ;; graphical frame.  Dirvish draws an attribute without checking its package
+  ;; is there, so the attribute is only listed once the package is installed.
+  ;;
+  ;; The size is in pixels, and one taller than the text would stretch every
+  ;; row.  Any size works when Emacs can scale images: the icons are scaled
+  ;; down from the 128 px set, whatever dirvish's docstring says about 23.
+  (let ((icons (and (locate-library "vscode-icon") '(vscode-icon))))
+    ;; The side window is narrow: the VC state in the fringe, the icon and the
+    ;; expansion arrow are all that fit.  A full-frame session has room for
+    ;; more.
+    (setq dirvish-side-attributes `(vc-state ,@icons subtree-state)
+          dirvish-attributes `(vc-state ,@icons subtree-state collapse file-size)
+          dirvish-side-width 32
+          dirvish-vscode-icon-size 18))
 
   ;; --- grouping the listing by file type ---
   ;; `dirvish-emerge-mode' is the mode from the screenshots: it splits a

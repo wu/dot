@@ -17,7 +17,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages '(consult corfu dape dirvish edit-indirect exec-path-from-shell go-mode gotest magit magit-gptcommit marginalia markdown-mode minuet orderless tabspaces vertico)))
+ '(package-selected-packages '(consult corfu dape dirvish edit-indirect exec-path-from-shell go-mode gotest magit magit-gptcommit marginalia markdown-mode minuet orderless tabspaces vertico vscode-icon)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
