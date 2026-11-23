@@ -1,4 +1,9 @@
-unset zle_bracketed_paste
+# Bracketed paste keeps a multi-line paste as one editable buffer instead of
+# running it line by line. Only disable it where the terminal can't handle the
+# escape sequences (Emacs shell-mode, dumb terminals); vterm/eat support it.
+if [[ $TERM == dumb || ( -n $INSIDE_EMACS && $INSIDE_EMACS != *vterm* && $INSIDE_EMACS != *eat* ) ]]; then
+    unset zle_bracketed_paste
+fi
 
 setopt				\
     NO_hup			\
@@ -44,6 +49,9 @@ autoload -U compinit && compinit
 alias g="git"
 alias k="kubectl"
 alias ll="ls -la"
+# toggle bracketed paste in the current shell (takes effect at the next prompt)
+alias paste-brack-off="unset zle_bracketed_paste"
+alias paste-brack-on="zle_bracketed_paste=(\$'\e[?2004h' \$'\e[?2004l')"
 
 # emacsclient, backgrounded and disowned so the shell stays free
 emacs() { emacsclient "$@" &! }
